@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: focusguard-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: focusguard
+      POSTGRES_PASSWORD: focusguard123
+      POSTGRES_DB: focusguard_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  backend:
+    build:
+      context: ./backend
+    container_name: focusguard-backend
+    restart: always
+    environment:
+      PORT: 4000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: focusguard
+      DB_PASSWORD: focusguard123
+      DB_NAME: focusguard_db
+    depends_on:
+      - postgres
+    ports:
+      - "4000:4000"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: focusguard-frontend
+    restart: always
+    depends_on:
+      - backend
+
+  nginx:
+    image: nginx:alpine
+    container_name: focusguard-nginx
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  postgres_data:
