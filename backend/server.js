@@ -6,7 +6,24 @@ const pool = require("./db/pool");
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:8080",
+  process.env.FRONTEND_URL,
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
+  })
+);
+
 app.use(express.json());
 
 app.get("/", (req, res) => {
@@ -32,6 +49,44 @@ app.get("/api/db-test", async (req, res) => {
       status: "db error",
       message: error.message,
     });
+  }
+});
+
+
+app.get("/api/init-db", async (req, res) => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS focus_sessions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR(100),
+        duration INTEGER NOT NULL,
+        keypress_count INTEGER DEFAULT 0,
+        click_count INTEGER DEFAULT 0,
+        tab_hidden_count INTEGER DEFAULT 0,
+        focus_score INTEGER DEFAULT 0,
+        memo TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    const userResult = await pool.query("SELECT * FROM users WHERE id = 1");
+
+    if (userResult.rows.length === 0) {
+      await pool.query("INSERT INTO users (name) VALUES ($1)", ["Demo User"]);
+    }
+
+    res.json({ message: "Database initialized successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 
