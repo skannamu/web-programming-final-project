@@ -1,0 +1,15 @@
+node_modules/
+**/node_modules/
+
+.env
+backend/.env
+
+dist/
+frontend/dist/
+
+postgres_data/
+
+.vscode/
+.idea/
+
+.DS_Store
